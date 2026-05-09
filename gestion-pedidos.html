@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SchoolStock — Gestión de Pedidos</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222636;
+    --border: #2e3347;
+    --accent: #4f8ef7;
+    --accent2: #f7954f;
+    --green: #4fca8e;
+    --red: #f74f6a;
+    --yellow: #f7c94f;
+    --text: #e8eaf0;
+    --muted: #7a7f96;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; }
+
+  /* NAV */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; background: var(--surface);
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
+  }
+  .nav-logo { font-family: var(--font-head); font-weight: 800; font-size: 18px; color: var(--accent); letter-spacing: -0.5px; }
+  .nav-logo span { color: var(--accent2); }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 7px 14px; border-radius: 8px; border: none; cursor: pointer;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    background: transparent; color: var(--muted); transition: all .2s;
+  }
+  .nav-tab.active { background: var(--accent); color: white; }
+  .nav-tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+
+  /* MAIN */
+  main { padding: 24px; max-width: 900px; margin: 0 auto; }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* STATS ROW */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px; text-align: center;
+  }
+  .stat-num { font-family: var(--font-head); font-size: 32px; font-weight: 800; line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+  .stat-card.green .stat-num { color: var(--green); }
+  .stat-card.red .stat-num { color: var(--red); }
+  .stat-card.blue .stat-num { color: var(--accent); }
+
+  /* SECTION TITLE */
+  .sec-title { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+  /* PEDIDOS LIST */
+  .pedido-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 10px; transition: border-color .2s;
+  }
+  .pedido-card:hover { border-color: var(--accent); }
+  .pedido-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .pedido-info h3 { font-family: var(--font-head); font-size: 15px; font-weight: 700; }
+  .pedido-info p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge {
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: .5px; white-space: nowrap;
+  }
+  .badge-pendiente { background: rgba(247,201,79,.12); color: var(--yellow); }
+  .badge-completo { background: rgba(79,202,142,.12); color: var(--green); }
+  .badge-incompleto { background: rgba(247,79,106,.12); color: var(--red); }
+  .badge-liberado { background: rgba(79,142,247,.12); color: var(--accent); }
+
+  .productos-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .prod-chip {
+    font-size: 12px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px; color: var(--text);
+  }
+  .prod-chip.faltante { border-color: var(--red); color: var(--red); background: rgba(247,79,106,.08); }
+
+  .pedido-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500; transition: all .2s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #6fa3f9; }
+  .btn-danger { background: rgba(247,79,106,.15); color: var(--red); border: 1px solid var(--red); }
+  .btn-danger:hover { background: rgba(247,79,106,.25); }
+  .btn-success { background: rgba(79,202,142,.15); color: var(--green); border: 1px solid var(--green); }
+  .btn-success:hover { background: rgba(79,202,142,.25); }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* INVENTORY TABLE */
+  .inv-table { width: 100%; border-collapse: collapse; }
+  .inv-table th { font-family: var(--font-head); font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .inv-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .inv-table tr:hover td { background: var(--surface2); }
+  .stock-bar-wrap { background: var(--surface2); border-radius: 4px; height: 6px; width: 100px; overflow: hidden; }
+  .stock-bar { height: 6px; border-radius: 4px; transition: width .4s; }
+  .bar-green { background: var(--green); }
+  .bar-yellow { background: var(--yellow); }
+  .bar-red { background: var(--red); }
+  .stock-num { font-family: var(--font-head); font-weight: 700; font-size: 16px; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    z-index: 200; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    padding: 24px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto;
+  }
+  .modal h2 { font-family: var(--font-head); font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .modal p { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
+  .form-group input, .form-group select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 10px 12px; font-family: var(--font-body); font-size: 14px;
+    outline: none; transition: border-color .2s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+  .prod-check { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--surface2); border-radius: 8px; margin-bottom: 6px; cursor: pointer; }
+  .prod-check input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); }
+  .prod-check label { font-size: 14px; cursor: pointer; flex: 1; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  /* PAQUETERIA */
+  .pkg-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .pkg-info h4 { font-family: var(--font-head); font-size: 14px; font-weight: 700; }
+  .pkg-info p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .pkg-badges { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+  /* FALTANTES ALERT */
+  .alert-box {
+    background: rgba(247,79,106,.08); border: 1px solid rgba(247,79,106,.3);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 20px;
+  }
+  .alert-box h4 { color: var(--red); font-family: var(--font-head); font-size: 13px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .faltante-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(247,79,106,.1); }
+  .faltante-row:last-child { border-bottom: none; }
+
+  /* SCAN INPUT */
+  .scan-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .scan-input {
+    flex: 1; background: var(--surface); border: 2px solid var(--accent);
+    border-radius: 10px; color: var(--text); padding: 10px 14px;
+    font-family: var(--font-body); font-size: 14px; outline: none;
+  }
+  .scan-hint { font-size: 12px; color: var(--muted); margin-top: -14px; margin-bottom: 16px; }
+
+  @media(max-width:600px) {
+    .stats { grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .stat-num { font-size: 24px; }
+    nav { padding: 12px 16px; }
+    .nav-logo { font-size: 15px; }
+    .nav-tab { padding: 6px 10px; font-size: 12px; }
+    main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">School<span>Stock</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPanel('pedidos')">Pedidos</button>
+    <button class="nav-tab" onclick="showPanel('inventario')">Inventario</button>
+    <button class="nav-tab" onclick="showPanel('paqueteria')">Paquetería</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- PANEL: PEDIDOS -->
+  <div class="panel active" id="panel-pedidos">
+    <div class="stats">
+      <div class="stat-card blue">
+        <div class="stat-num" id="stat-total">1</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-num" id="stat-completos">0</div>
+        <div class="stat-label">Completos</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-num" id="stat-incompletos">0</div>
+        <div class="stat-label">Incompletos</div>
+      </div>
+    </div>
+
+    <div class="scan-row">
+      <input class="scan-input" id="scan-input" placeholder="📦 Escanea CB o escribe No. de pedido..." onkeydown="handleScan(event)">
+      <button class="btn btn-primary" onclick="handleScan({key:'Enter'})">Buscar</button>
+    </div>
+    <p class="scan-hint">Escanea el código de barras del listado impreso</p>
+
+    <div class="sec-title">Pedidos de hoy</div>
+    <div id="pedidos-list"></div>
+
+    <button class="btn btn-ghost" onclick="openModal('nuevo-pedido')" style="width:100%;margin-top:8px;">+ Agregar pedido manualmente</button>
+  </div>
+
+  <!-- PANEL: INVENTARIO -->
+  <div class="panel" id="panel-inventario">
+    <div id="faltantes-alert" style="display:none"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="sec-title" style="margin-bottom:0">Inventario en tiempo real</div>
+      <button class="btn btn-primary" onclick="openModal('agregar-producto')">+ Producto</button>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Escuela</th>
+            <th>Existencia</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="inv-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PANEL: PAQUETERÍA -->
+  <div class="panel" id="panel-paqueteria">
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat-card blue">
+        <div class="stat-num" id="stat-paq">0</div>
+        <div class="stat-label">Total paquetes</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-num" id="stat-escuela">0</div>
+        <div class="stat-label">Entrega escolar</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="sec-title" style="margin-bottom:0">Paquetes registrados</div>
+      <button class="btn btn-primary" onclick="openModal('nuevo-paquete')">+ Registrar</button>
+    </div>
+    <div id="paquetes-list"><p style="color:var(--muted);text-align:center;padding:40px;font-size:14px;">Aún no hay paquetes registrados hoy</p></div>
+  </div>
+
+</main>
+
+<!-- MODAL: MARCAR INCOMPLETO -->
+<div class="modal-overlay" id="modal-incompleto">
+  <div class="modal">
+    <h2>Marcar incompleto</h2>
+    <p id="modal-inc-sub">Selecciona los productos que FALTAN</p>
+    <div id="modal-inc-prods"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('incompleto')">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarIncompleto()">Guardar faltantes</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NUEVO PEDIDO -->
+<div class="modal-overlay" id="modal-nuevo-pedido">
+  <div class="modal">
+    <h2>Nuevo pedido</h2>
+    <p>Ingresa los datos del pedido</p>
+    <div class="form-group">
+      <label>No. de pedido</label>
+      <input type="text" id="np-numero" placeholder="Ej. 33315">
+    </div>
+    <div class="form-group">
+      <label>Nombre del alumno</label>
+      <input type="text" id="np-alumno" placeholder="Ej. Rogelio Ramírez">
+    </div>
+    <div class="form-group">
+      <label>Grado</label>
+      <input type="text" id="np-grado" placeholder="Ej. 1ro de Primaria">
+    </div>
+    <div class="form-group">
+      <label>Colegio</label>
+      <input type="text" id="np-colegio" placeholder="Ej. Ignacio Zaragoza">
+    </div>
+    <div class="form-group">
+      <label>Productos (uno por línea)</label>
+      <input type="text" id="np-prods" placeholder="Mi libro mágico, Juguemos a leer...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('nuevo-pedido')">Cancelar</button>
+      <button class="btn btn-primary" onclick="agregarPedido()">Agregar pedido</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: AGREGAR PRODUCTO -->
+<div class="modal-overlay" id="modal-agregar-producto">
+  <div class="modal">
+    <h2>Agregar producto</h2>
+    <p>Registra un nuevo producto al inventario</p>
+    <div class="form-group">
+      <label>Nombre del producto</label>
+      <input type="text" id="ap-nombre" placeholder="Ej. Mi libro mágico">
+    </div>
+    <div class="form-group">
+      <label>Colegio</label>
+      <input type="text" id="ap-colegio" placeholder="Ej. Ignacio Zaragoza">
+    </div>
+    <div class="form-group">
+      <label>Existencia inicial</label>
+      <input type="number" id="ap-stock" placeholder="Ej. 50">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('agregar-producto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="agregarProducto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NUEVO PAQUETE -->
+<div class="modal-overlay" id="modal-nuevo-paquete">
+  <div class="modal">
+    <h2>Registrar paquete</h2>
+    <p>Ingresa los datos del envío</p>
+    <div class="form-group">
+      <label>No. de pedido</label>
+      <input type="text" id="pp-numero" placeholder="Escanea CB o escribe número">
+    </div>
+    <div class="form-group">
+      <label>Tipo de envío</label>
+      <select id="pp-tipo">
+        <option value="">Selecciona...</option>
+        <option value="Estafeta">Estafeta</option>
+        <option value="FedEx">FedEx</option>
+        <option value="Escuela">Entrega en escuela</option>
+      </select>
+    </div>
+    <div id="pp-escuela-fields" style="display:none">
+      <div class="form-group">
+        <label>Nombre del alumno</label>
+        <input type="text" id="pp-alumno" placeholder="">
+      </div>
+      <div class="form-group">
+        <label>Grado</label>
+        <input type="text" id="pp-grado" placeholder="">
+      </div>
+      <div class="form-group">
+        <label>Nombre de la escuela</label>
+        <input type="text" id="pp-escuela" placeholder="">
+      </div>
+      <div class="form-group">
+        <label>Fecha programada de entrega</label>
+        <input type="date" id="pp-fecha">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('nuevo-paquete')">Cancelar</button>
+      <button class="btn btn-primary" onclick="agregarPaquete()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+let pedidos = [
+  {
+    id: '33315',
+    alumno: 'Rogelio Ramírez',
+    grado: '1ro de Primaria',
+    colegio: 'Ignacio Zaragoza',
+    productos: ['Mi libro mágico', 'Juguemos a leer', 'Marometa matemáticas 3'],
+    faltantes: [],
+    status: 'pendiente' // pendiente | completo | incompleto | liberado
+  }
+];
+
+let inventario = [
+  { id: 1, nombre: 'Mi libro mágico', colegio: 'Ignacio Zaragoza', stock: 12, max: 20 },
+  { id: 2, nombre: 'Juguemos a leer', colegio: 'Ignacio Zaragoza', stock: 3, max: 20 },
+  { id: 3, nombre: 'Marometa matemáticas 3', colegio: 'Ignacio Zaragoza', stock: 0, max: 20 },
+];
+
+let paquetes = [];
+let currentPedidoId = null;
+
+// ── PANELS ────────────────────────────────────────────────────────────────────
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'inventario') renderInventario();
+  if (name === 'pedidos') renderPedidos();
+  if (name === 'paqueteria') renderPaquetes();
+}
+
+// ── MODALS ────────────────────────────────────────────────────────────────────
+function openModal(name) {
+  document.getElementById('modal-' + name).classList.add('open');
+}
+function closeModal(name) {
+  document.getElementById('modal-' + name).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// PAQUETE tipo toggle
+document.getElementById('pp-tipo').addEventListener('change', function() {
+  document.getElementById('pp-escuela-fields').style.display = this.value === 'Escuela' ? 'block' : 'none';
+});
+
+// ── SCAN ──────────────────────────────────────────────────────────────────────
+function handleScan(e) {
+  if (e.key !== 'Enter') return;
+  const val = document.getElementById('scan-input').value.trim();
+  if (!val) return;
+  const pedido = pedidos.find(p => p.id === val);
+  if (pedido) {
+    currentPedidoId = pedido.id;
+    openIncompleto(pedido.id);
+  } else {
+    alert('Pedido ' + val + ' no encontrado. Puedes agregarlo manualmente.');
+  }
+  document.getElementById('scan-input').value = '';
+}
+
+// ── PEDIDOS ───────────────────────────────────────────────────────────────────
+function renderPedidos() {
+  const list = document.getElementById('pedidos-list');
+  list.innerHTML = '';
+  pedidos.forEach(p => {
+    const faltantesHtml = p.faltantes.length
+      ? p.faltantes.map(f => `<span class="prod-chip faltante">✗ ${f}</span>`).join('')
+      : '';
+    const prodHtml = p.productos
+      .map(pr => `<span class="prod-chip ${p.faltantes.includes(pr) ? 'faltante' : ''}">${p.faltantes.includes(pr) ? '✗ ' : ''}${pr}</span>`)
+      .join('');
+
+    let actions = '';
+    if (p.status === 'pendiente') {
+      actions = `
+        <button class="btn btn-success" onclick="marcarCompleto('${p.id}')">✓ Completo</button>
+        <button class="btn btn-danger" onclick="openIncompleto('${p.id}')">✗ Incompleto</button>
+      `;
+    } else if (p.status === 'completo') {
+      actions = `<button class="btn btn-primary" onclick="liberarPedido('${p.id}')">Liberar pedido →</button>`;
+    } else if (p.status === 'incompleto') {
+      actions = `
+        <button class="btn btn-success" onclick="marcarCompleto('${p.id}')">✓ Ya se completó</button>
+        <span style="font-size:12px;color:var(--muted);padding:8px 0;display:inline-block">Falta: ${p.faltantes.join(', ')}</span>
+      `;
+    } else if (p.status === 'liberado') {
+      actions = `<button class="btn btn-ghost" onclick="irAPaqueteria('${p.id}')">📦 Registrar envío</button>`;
+    }
+
+    list.innerHTML += `
+      <div class="pedido-card">
+        <div class="pedido-head">
+          <div class="pedido-info">
+            <h3>${p.alumno} <span style="color:var(--muted);font-weight:400">#${p.id}</span></h3>
+            <p>${p.grado} — ${p.colegio}</p>
+          </div>
+          <span class="badge badge-${p.status}">${p.status}</span>
+        </div>
+        <div class="productos-list">${prodHtml}</div>
+        <div class="pedido-actions">${actions}</div>
+      </div>
+    `;
+  });
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = pedidos.length;
+  document.getElementById('stat-completos').textContent = pedidos.filter(p => p.status === 'completo' || p.status === 'liberado').length;
+  document.getElementById('stat-incompletos').textContent = pedidos.filter(p => p.status === 'incompleto').length;
+}
+
+function marcarCompleto(id) {
+  const p = pedidos.find(x => x.id === id);
+  p.status = 'completo';
+  p.faltantes = [];
+  // Descontar del inventario
+  p.productos.forEach(nombre => {
+    const inv = inventario.find(i => i.nombre === nombre);
+    if (inv && inv.stock > 0) inv.stock--;
+  });
+  renderPedidos();
+}
+
+function liberarPedido(id) {
+  const p = pedidos.find(x => x.id === id);
+  p.status = 'liberado';
+  renderPedidos();
+}
+
+function irAPaqueteria(id) {
+  document.getElementById('pp-numero').value = id;
+  showPanel('paqueteria');
+  document.querySelectorAll('.nav-tab')[2].classList.add('active');
+  document.querySelectorAll('.nav-tab')[0].classList.remove('active');
+  openModal('nuevo-paquete');
+}
+
+function openIncompleto(id) {
+  currentPedidoId = id;
+  const p = pedidos.find(x => x.id === id);
+  document.getElementById('modal-inc-sub').textContent = `Pedido #${p.id} — ${p.alumno}`;
+  const cont = document.getElementById('modal-inc-prods');
+  cont.innerHTML = p.productos.map(pr => `
+    <div class="prod-check">
+      <input type="checkbox" id="chk-${pr.replace(/\s/g,'_')}" value="${pr}" ${p.faltantes.includes(pr) ? 'checked' : ''}>
+      <label for="chk-${pr.replace(/\s/g,'_')}">${pr}</label>
+    </div>
+  `).join('');
+  openModal('incompleto');
+}
+
+function confirmarIncompleto() {
+  const p = pedidos.find(x => x.id === currentPedidoId);
+  const checks = document.querySelectorAll('#modal-inc-prods input[type=checkbox]:checked');
+  p.faltantes = Array.from(checks).map(c => c.value);
+  p.status = p.faltantes.length > 0 ? 'incompleto' : 'completo';
+  closeModal('incompleto');
+  renderPedidos();
+}
+
+function agregarPedido() {
+  const id = document.getElementById('np-numero').value.trim();
+  if (!id) { alert('Ingresa el número de pedido'); return; }
+  if (pedidos.find(p => p.id === id)) { alert('⚠️ Pedido duplicado: ' + id); return; }
+  pedidos.push({
+    id,
+    alumno: document.getElementById('np-alumno').value || 'Sin nombre',
+    grado: document.getElementById('np-grado').value || '',
+    colegio: document.getElementById('np-colegio').value || '',
+    productos: document.getElementById('np-prods').value.split(',').map(s => s.trim()).filter(Boolean),
+    faltantes: [],
+    status: 'pendiente'
+  });
+  closeModal('nuevo-pedido');
+  ['np-numero','np-alumno','np-grado','np-colegio','np-prods'].forEach(id => document.getElementById(id).value = '');
+  renderPedidos();
+}
+
+// ── INVENTARIO ────────────────────────────────────────────────────────────────
+function renderInventario() {
+  const tbody = document.getElementById('inv-tbody');
+  tbody.innerHTML = '';
+  const faltantes = {};
+
+  pedidos.filter(p => p.status === 'incompleto').forEach(p => {
+    p.faltantes.forEach(f => {
+      faltantes[f] = (faltantes[f] || 0) + 1;
+    });
+  });
+
+  inventario.forEach(item => {
+    const pct = Math.min((item.stock / item.max) * 100, 100);
+    const barClass = pct > 50 ? 'bar-green' : pct > 20 ? 'bar-yellow' : 'bar-red';
+    const stockColor = pct > 50 ? 'var(--green)' : pct > 20 ? 'var(--yellow)' : 'var(--red)';
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${item.nombre}</strong></td>
+        <td style="color:var(--muted);font-size:13px">${item.colegio}</td>
+        <td>
+          <span class="stock-num" style="color:${stockColor}">${item.stock}</span>
+          <div class="stock-bar-wrap" style="margin-top:4px">
+            <div class="stock-bar ${barClass}" style="width:${pct}%"></div>
+          </div>
+        </td>
+        <td>
+          ${item.stock === 0 ? '<span class="badge badge-incompleto">Sin stock</span>' :
+            item.stock <= 3 ? '<span class="badge badge-pendiente">Poco stock</span>' :
+            '<span class="badge badge-completo">OK</span>'}
+          ${faltantes[item.nombre] ? `<span style="font-size:11px;color:var(--red);display:block;margin-top:3px">Falta en ${faltantes[item.nombre]} pedido(s)</span>` : ''}
+        </td>
+      </tr>
+    `;
+  });
+
+  // Alerta faltantes
+  const alertDiv = document.getElementById('faltantes-alert');
+  const totalFaltantes = Object.keys(faltantes);
+  if (totalFaltantes.length) {
+    alertDiv.style.display = 'block';
+    alertDiv.innerHTML = `
+      <div class="alert-box">
+        <h4>🔴 Productos que bloquean pedidos</h4>
+        ${totalFaltantes.map(f => `
+          <div class="faltante-row">
+            <span>${f}</span>
+            <span style="color:var(--red);font-weight:600">${faltantes[f]} pedido(s) bloqueado(s)</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    alertDiv.style.display = 'none';
+  }
+}
+
+function agregarProducto() {
+  const nombre = document.getElementById('ap-nombre').value.trim();
+  const colegio = document.getElementById('ap-colegio').value.trim();
+  const stock = parseInt(document.getElementById('ap-stock').value) || 0;
+  if (!nombre) { alert('Ingresa el nombre del producto'); return; }
+  inventario.push({ id: Date.now(), nombre, colegio, stock, max: Math.max(stock, 20) });
+  closeModal('agregar-producto');
+  ['ap-nombre','ap-colegio','ap-stock'].forEach(id => document.getElementById(id).value = '');
+  renderInventario();
+}
+
+// ── PAQUETERÍA ────────────────────────────────────────────────────────────────
+function renderPaquetes() {
+  const list = document.getElementById('paquetes-list');
+  document.getElementById('stat-paq').textContent = paquetes.length;
+  document.getElementById('stat-escuela').textContent = paquetes.filter(p => p.tipo === 'Escuela').length;
+  if (!paquetes.length) {
+    list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;font-size:14px;">Aún no hay paquetes registrados hoy</p>';
+    return;
+  }
+  list.innerHTML = paquetes.map(p => `
+    <div class="pkg-card">
+      <div class="pkg-info">
+        <h4>#${p.numero} — ${p.alumno || '—'}</h4>
+        <p>${p.escuela || ''} ${p.grado ? '· ' + p.grado : ''} ${p.fecha ? '· Entrega: ' + p.fecha : ''}</p>
+      </div>
+      <div class="pkg-badges">
+        <span class="badge ${p.tipo === 'Estafeta' ? 'badge-pendiente' : p.tipo === 'FedEx' ? 'badge-liberado' : 'badge-completo'}">${p.tipo}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function agregarPaquete() {
+  const numero = document.getElementById('pp-numero').value.trim();
+  const tipo = document.getElementById('pp-tipo').value;
+  if (!numero || !tipo) { alert('Completa los campos obligatorios'); return; }
+  if (paquetes.find(p => p.numero === numero)) {
+    alert('⚠️ Pedido duplicado: ' + numero + '\nEste número ya fue registrado.');
+    return;
+  }
+  paquetes.push({
+    numero,
+    tipo,
+    alumno: document.getElementById('pp-alumno').value,
+    grado: document.getElementById('pp-grado').value,
+    escuela: document.getElementById('pp-escuela').value,
+    fecha: document.getElementById('pp-fecha').value,
+  });
+  closeModal('nuevo-paquete');
+  ['pp-numero','pp-alumno','pp-grado','pp-escuela','pp-fecha'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pp-tipo').value = '';
+  document.getElementById('pp-escuela-fields').style.display = 'none';
+  renderPaquetes();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderPedidos();
+</script>
+</body>
+</html>
